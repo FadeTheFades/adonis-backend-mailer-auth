@@ -386,19 +386,22 @@ export default class UsersController {
 
         const googleUser = await google.user()
 
-        const user = await User.firstOrCreate(
-            {
-                provider: 'google',
-                provider_id: googleUser.id
-            },
-            {
+        let user = await User.findBy('email', googleUser.email!)
+
+        if (user) {
+            user.provider = 'google'
+            user.provider_id = googleUser.id
+            user.is_verified = true
+            await user.save()
+        } else {
+            user = await User.create({
                 email: googleUser.email!,
                 name: googleUser.name,
                 provider: 'google',
                 provider_id: googleUser.id,
                 is_verified: true
-            }
-        )
+            })
+        }
 
         const token = await User.accessTokens.create(user)
         const tokenValue = token.value!.release()
