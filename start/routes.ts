@@ -38,6 +38,7 @@ router.post('/auth/logout', [UsersController, 'logout']).middleware([middleware.
 router.post('/profile/update', [UsersController, 'updateProfile']).middleware([middleware.cookie_to_bearer(), middleware.auth()])
 router.post('/profile/password/update', [UsersController, 'updatePassword']).middleware([middleware.cookie_to_bearer(), middleware.auth()])
 router.post('/profile/password/create', [UsersController, 'createPassword']).middleware([middleware.cookie_to_bearer(), middleware.auth()])
+router.post('/profile/avatar/upload', [UsersController, 'uploadAvatar']).middleware([middleware.cookie_to_bearer(), middleware.auth()])
 
 router.post('/verify-otp', [UsersController, 'verifyOtp'])
 router.get('/verify-otp', [UsersController, 'verifyLink'])

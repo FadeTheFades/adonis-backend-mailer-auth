@@ -30,6 +30,9 @@ export default class User extends compose(BaseModel, AuthFinder) {
   declare role: any
 
   @column()
+  public avatar?: string | null
+
+  @column()
   declare otp_code: string | null
 
   @column()

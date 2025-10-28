@@ -9,6 +9,7 @@ import env from '#start/env'
 import { timingSafeEqual } from 'node:crypto'
 import hash from '@adonisjs/core/services/hash'
 import vine from '@vinejs/vine'
+import AvatarService from '#services/avatar_service'
 
 function generateOtp(): string {
     return crypto.randomInt(100000, 1000000).toString()
@@ -38,7 +39,8 @@ export default class UsersController {
                 email: user.email,
                 phone_number: user.phone_number,
                 is_verified: user.is_verified,
-                role: user.role
+                role: user.role,
+                avatar: user.avatar
             })
         } catch (err) {
             console.error('Error in me endpoint:', err)
@@ -477,5 +479,25 @@ export default class UsersController {
             status: true,
             message: 'Password created successfully'
         })
+    }
+
+    public async uploadAvatar({ auth, request, response }: HttpContext) {
+        const user = await auth.use('api').authenticate()
+
+        const avatar = request.file('avatar', {
+            extnames: ['jpg', 'png', 'jpeg', 'webp'],
+            size: '20mb',
+        })
+
+        if (!avatar) {
+            return response.badRequest({ status: false, message: 'No file uploaded!' })
+        }
+
+        if (!avatar.isValid) {
+            return response.badRequest({ status: false, message: avatar.errors })
+        }
+
+        const result = await AvatarService.upload(user, avatar)
+        return response.ok(result)
     }
 }
