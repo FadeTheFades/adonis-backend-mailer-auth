@@ -10,6 +10,8 @@ import { timingSafeEqual } from 'node:crypto'
 import hash from '@adonisjs/core/services/hash'
 import vine from '@vinejs/vine'
 import AvatarService from '#services/avatar_service'
+import app from '@adonisjs/core/services/app'
+import fs from 'fs'
 
 function generateOtp(): string {
     return crypto.randomInt(100000, 1000000).toString()
@@ -499,5 +501,46 @@ export default class UsersController {
 
         const result = await AvatarService.upload(user, avatar)
         return response.ok(result)
+    }
+
+    public async updateAvatarUrl({ auth, request, response }: HttpContext) {
+        const user = await auth.use('api').authenticate()
+
+        const { avatar_url } = request.only(['avatar_url'])
+
+        if (!avatar_url || typeof avatar_url !== 'string' || !avatar_url.trim()) {
+            return response.badRequest({
+            status: false,
+            message: 'Avatar URL is required.',
+            })
+        }
+
+        const urlPattern = /^(https?:\/\/[^\s$.?#].[^\s]*)$/i
+        if (!urlPattern.test(avatar_url)) {
+            return response.badRequest({
+            status: false,
+            message: 'Invalid URL format.',
+            })
+        }
+
+        if (user.avatar && user.avatar.startsWith('/uploads/')) {
+            const oldAvatarPath = app.publicPath(user.avatar.replace(/^\/+/, ''))
+            try {
+            if (fs.existsSync(oldAvatarPath)) {
+                fs.unlinkSync(oldAvatarPath)
+            }
+            } catch (err) {
+            console.warn(`⚠️ Failed to delete old local avatar: ${err}`)
+            }
+        }
+
+        user.avatar = avatar_url
+        await user.save()
+
+        return response.ok({
+            status: true,
+            message: 'Avatar URL updated successfully.',
+            avatar_url: user.avatar,
+        })
     }
 }
