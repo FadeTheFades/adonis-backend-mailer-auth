@@ -23,3 +23,8 @@ yarn-error.log
 
 # Platform specific
 .DS_Store
+
+# Other package manager
+pnpm-lock.yaml
+pnpm-workspace.yaml
+bun.lock
