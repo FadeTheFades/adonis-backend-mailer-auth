@@ -40,6 +40,7 @@ export default class UsersController {
     public async me({ auth, response }: HttpContext) {
         try {
             const user = await auth.use('api').authenticate()
+            await user.load('land')
             return response.ok({
                 id: user.id,
                 name: user.name,
@@ -50,7 +51,14 @@ export default class UsersController {
                 avatar: user.avatar,
                 areasOfInterest: user.areasOfInterest,
                 countryRegion: user.countryRegion,
-                detailAddress: user.detailAddress
+                detailAddress: user.detailAddress,
+                resourceInterests: user.resourceInterests,
+                challengesGoals: user.challengesGoals,
+                preferredContactMethod: user.preferredContactMethod,
+                subscribesToNewsletter: user.subscribesToNewsletter,
+                membershipPackage: user.membershipPackage,
+
+                land: user.land
             })
         } catch (err) {
             console.error('Error in me endpoint:', err)
