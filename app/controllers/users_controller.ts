@@ -14,6 +14,8 @@ import app from '@adonisjs/core/services/app'
 import fs from 'fs'
 import { InterestKeys } from '../constants/interests.js'
 import { LandUseKeys } from '../constants/land_use.js'
+import { ResourceKeys } from '../constants/resource_keys.js'
+import { ContactMethods } from '../constants/contact_method.js'
 
 function generateOtp(): string {
     return crypto.randomInt(100000, 1000000).toString()
@@ -318,7 +320,11 @@ export default class UsersController {
                 phone_number: vine.string().trim().mobile().optional(),
                 areasOfInterest: vine.array(vine.enum([...InterestKeys])).optional(),
                 country_region: vine.string().trim().minLength(2).optional(),
-                detail_address: vine.string().trim().minLength(5).optional()
+                detail_address: vine.string().trim().minLength(5).optional(),
+                resourceInterests: vine.array(vine.enum([...ResourceKeys])).optional(),
+                challenges_goals: vine.string().trim().minLength(2).optional(),
+                preferred_contact_method: vine.enum([...ContactMethods]).optional(),
+                subscribes_to_newsletter: vine.boolean().optional(),
             })
 
             const validator = vine.compile(profileSchema)
@@ -326,17 +332,31 @@ export default class UsersController {
 
             const hasName = payload.name && payload.name.trim() !== ''
             const hasPhone = payload.phone_number && payload.phone_number.trim() !== ''
-            const hasInterests =
-            payload.areasOfInterest && payload.areasOfInterest.length > 0
+            const hasInterests = payload.areasOfInterest && payload.areasOfInterest.length > 0
             const hasCountry = payload.country_region && payload.country_region.trim() !== ''
             const hasAddress = payload.detail_address && payload.detail_address.trim() !== ''
 
-            if (!hasName && !hasPhone && !hasInterests && !hasCountry && !hasAddress) {
+            const hasResources = payload.resourceInterests && payload.resourceInterests.length > 0
+            const hasChallenges = payload.challenges_goals && payload.challenges_goals.trim() !== ''
+            const hasContactMethod = payload.preferred_contact_method
+            const hasNewsletter = payload.subscribes_to_newsletter !== undefined
+
+            if (
+                !hasName &&
+                !hasPhone &&
+                !hasInterests &&
+                !hasCountry &&
+                !hasAddress &&
+                !hasResources &&
+                !hasChallenges &&
+                !hasContactMethod &&
+                !hasNewsletter
+            ) {
                 throw new vineErrors.E_VALIDATION_ERROR([
                     {
-                    field: 'root',
-                    message: 'At least one field is required.',
-                    rule: 'atLeastOneOf',
+                        field: 'root',
+                        message: 'At least one field is required.',
+                        rule: 'atLeastOneOf',
                     },
                 ])
             }
@@ -348,24 +368,25 @@ export default class UsersController {
                 message: 'Profile updated successfully',
                 data: user.serialize({
                     fields: [
-                    'id',
-                    'name',
-                    'email',
-                    'phone_number',
-                    'is_verified',
-                    'areasOfInterest',
-                    'avatar',
-                    'countryRegion',
-                    'detailAddress'
+                        'id',
+                        'name',
+                        'email',
+                        'phone_number',
+                        'is_verified',
+                        'areasOfInterest',
+                        'avatar',
+                        'countryRegion',
+                        'detailAddress',
+                        'resourceInterests',
+                        'challengesGoals',
+                        'preferredContactMethod',
+                        'subscribesToNewsletter',
                     ],
                 }),
             })
         } catch (error) {
             if (error instanceof vineErrors.E_VALIDATION_ERROR) {
-                return response.status(400).json({
-                    success: false,
-                    errors: error.messages,
-                })
+                return response.status(400).json({ success: false, errors: error.messages })
             }
 
             console.error('Error updating profile:', error)

@@ -7,6 +7,8 @@ import { DbAccessTokensProvider } from '@adonisjs/auth/access_tokens'
 import { InterestKey } from '../constants/interests.js'
 import Land from '#models/land'
 import type { HasOne } from '@adonisjs/lucid/types/relations'
+import { ResourceKey } from '../constants/resource_keys.js'
+import { ContactMethod } from '../constants/contact_method.js'
 
 const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
   uids: ['email'],
@@ -96,6 +98,29 @@ export default class User extends compose(BaseModel, AuthFinder) {
 
   @column({ serializeAs: null })
   declare password: string | null
+
+  @column({
+    columnName: 'resource_interests',
+    prepare: (value: ResourceKey[]) => JSON.stringify(value || []),
+    consume: (value: any) => {
+      if (!value) return []
+      if (Array.isArray(value)) return value
+      if (typeof value === 'string') {
+        try { return JSON.parse(value) } catch { return [] }
+      }
+      return []
+    },
+  })
+  declare resourceInterests: ResourceKey[]
+
+  @column({ columnName: 'challenges_goals' })
+  declare challengesGoals: string | null
+
+  @column({ columnName: 'preferred_contact_method' })
+  declare preferredContactMethod: ContactMethod | null
+
+  @column({ columnName: 'subscribes_to_newsletter' })
+  declare subscribesToNewsletter: boolean | null
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
