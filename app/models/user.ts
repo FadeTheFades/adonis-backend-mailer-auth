@@ -9,6 +9,7 @@ import Land from '#models/land'
 import type { HasOne } from '@adonisjs/lucid/types/relations'
 import { ResourceKey } from '../constants/resource_keys.js'
 import { ContactMethod } from '../constants/contact_method.js'
+import { MembershipPackage } from '../constants/membership_packages.js'
 
 const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
   uids: ['email'],
@@ -121,6 +122,9 @@ export default class User extends compose(BaseModel, AuthFinder) {
 
   @column({ columnName: 'subscribes_to_newsletter' })
   declare subscribesToNewsletter: boolean | null
+
+  @column({ columnName: 'membership_package' })
+  declare membershipPackage: MembershipPackage | null
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime

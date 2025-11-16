@@ -16,6 +16,7 @@ import { InterestKeys } from '../constants/interests.js'
 import { LandUseKeys } from '../constants/land_use.js'
 import { ResourceKeys } from '../constants/resource_keys.js'
 import { ContactMethods } from '../constants/contact_method.js'
+import { MembershipPackages } from '../constants/membership_packages.js'
 
 function generateOtp(): string {
     return crypto.randomInt(100000, 1000000).toString()
@@ -325,6 +326,7 @@ export default class UsersController {
                 challenges_goals: vine.string().trim().minLength(2).optional(),
                 preferred_contact_method: vine.enum([...ContactMethods]).optional(),
                 subscribes_to_newsletter: vine.boolean().optional(),
+                membership_package: vine.enum([...MembershipPackages]).optional(),
             })
 
             const validator = vine.compile(profileSchema)
@@ -340,6 +342,7 @@ export default class UsersController {
             const hasChallenges = payload.challenges_goals && payload.challenges_goals.trim() !== ''
             const hasContactMethod = payload.preferred_contact_method
             const hasNewsletter = payload.subscribes_to_newsletter !== undefined
+            const hasMembership = payload.membership_package
 
             if (
                 !hasName &&
@@ -350,7 +353,8 @@ export default class UsersController {
                 !hasResources &&
                 !hasChallenges &&
                 !hasContactMethod &&
-                !hasNewsletter
+                !hasNewsletter &&
+                !hasMembership
             ) {
                 throw new vineErrors.E_VALIDATION_ERROR([
                     {
@@ -381,6 +385,7 @@ export default class UsersController {
                         'challengesGoals',
                         'preferredContactMethod',
                         'subscribesToNewsletter',
+                        'membershipPackage'
                     ],
                 }),
             })
