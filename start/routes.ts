@@ -42,4 +42,4 @@ router.group(() => {
     router.get('/admin/contact-submissions', [ContactSubmissionsController, 'index'])
 
     router.get('/admin/dashboard', [AdminController, 'dashboard']).middleware(middleware.adminAuth)
-  }).middleware([middleware.cookie_to_bearer(), middleware.auth()])
+  }).middleware([middleware.cookieToBearer(), middleware.auth()])

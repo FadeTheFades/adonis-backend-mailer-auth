@@ -2,7 +2,7 @@ import { HttpContext } from '@adonisjs/core/http'
 import env from '#start/env'
 
 
-export default class ApiKeyAuth {
+export default class ApiKeyAuthMiddleware {
   public async handle(ctx: HttpContext, next: () => Promise<void>) {
     const apiKey = ctx.request.header('x-api-key')
     const validApiKey = env.get('API_KEY_MAILER')

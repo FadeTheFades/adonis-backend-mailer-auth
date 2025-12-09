@@ -1,6 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 
-export default class CookieToBearer {
+export default class CookieToBearerMiddleware {
     public async handle(ctx: HttpContext, next: () => Promise<void>) {
         const authHeader = ctx.request.header('authorization')
         if (!authHeader) {
