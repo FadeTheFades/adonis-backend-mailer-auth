@@ -12,6 +12,7 @@ import MailersController from '#controllers/mailers_controller'
 import UsersController from '#controllers/users_controller'
 import ContactSubmissionsController from '#controllers/contact_submissions_controller'
 import AdminController from '#controllers/admin_controller'
+import StripeController from '#controllers/stripe_controller'
 import { middleware } from './kernel.js'
 
 router.get('/', async () => {
@@ -20,6 +21,11 @@ router.get('/', async () => {
 
 router.post('/api/send-email', [MailersController, 'sendEmail'])
 router.post('/contact', [ContactSubmissionsController, 'store'])
+
+// Stripe endpoints
+router.post('/api/stripe/checkout', [StripeController, 'checkout']).middleware([middleware.cookieToBearer(), middleware.auth()])
+router.post('/api/stripe/webhook', [StripeController, 'webhook']).middleware([middleware.skipBodyparser()])
+
 router.get('/auth/google/redirect', [UsersController, 'redirectToGoogle'])
 router.get('/auth/google/callback', [UsersController, 'handleGoogleCallback'])
 router.post('/auth/register', [UsersController, 'register'])
@@ -42,4 +48,8 @@ router.group(() => {
     router.get('/admin/contact-submissions', [ContactSubmissionsController, 'index'])
 
     router.get('/admin/dashboard', [AdminController, 'dashboard']).middleware(middleware.adminAuth)
+
+    // Stripe protected routes
+    router.get('/api/stripe/order/:id', [StripeController, 'getOrder'])
+    router.get('/api/stripe/orders', [StripeController, 'getUserOrders'])
   }).middleware([middleware.cookieToBearer(), middleware.auth()])

@@ -33,7 +33,12 @@ server.use([
  * The router middleware stack runs middleware on all the HTTP
  * requests with a registered route.
  */
-router.use([() => import('@adonisjs/core/bodyparser_middleware'), () => import('@adonisjs/auth/initialize_auth_middleware')])
+router.use([
+  // Capture Stripe raw body before bodyparser so signature verification can work
+  () => import('#middleware/stripe_webhook_middleware'),
+  () => import('#middleware/conditional_bodyparser_middleware'),
+  () => import('@adonisjs/auth/initialize_auth_middleware')
+])
 
 /**
  * Named middleware collection must be explicitly assigned to
@@ -43,5 +48,8 @@ export const middleware = router.named({
   adminAuth: () => import('#middleware/admin_auth_middleware'),
   auth: () => import('#middleware/auth_middleware'),
   apiKeyAuth: () => import('#middleware/api_key_auth_middleware'),
-  cookieToBearer: () => import('#middleware/cookie_to_bearer_middleware')
+  cookieToBearer: () => import('#middleware/cookie_to_bearer_middleware'),
+  captureRawBody: () => import('#middleware/capture_raw_body_middleware'),
+  stripeWebhook: () => import('#middleware/stripe_webhook_middleware'),
+  skipBodyparser: () => import('#middleware/skip_bodyparser_middleware'),
 })
