@@ -13,6 +13,7 @@ import UsersController from '#controllers/users_controller'
 import ContactSubmissionsController from '#controllers/contact_submissions_controller'
 import AdminController from '#controllers/admin_controller'
 import StripeController from '#controllers/stripe_controller'
+import LandStewardshipPlansController from '#controllers/land_stewardship_plans_controller'
 import { middleware } from './kernel.js'
 
 router.get('/', async () => {
@@ -44,6 +45,12 @@ router.group(() => {
     router.post('/profile/avatar/upload', [UsersController, 'uploadAvatar'])
     router.post('/profile/avatar/url', [UsersController, 'updateAvatarUrl'])
     router.post('/profile/land', [UsersController, 'updateLandProfile'])
+
+    router.get('/plans/current', [LandStewardshipPlansController, 'show'])
+    router.post('/plans/step1', [LandStewardshipPlansController, 'step1'])
+    router.post('/plans/step2', [LandStewardshipPlansController, 'step2'])
+    router.post('/plans/step3', [LandStewardshipPlansController, 'step3'])
+    router.post('/plans/step4', [LandStewardshipPlansController, 'step4'])
 
     router.get('/admin/contact-submissions', [ContactSubmissionsController, 'index'])
 
