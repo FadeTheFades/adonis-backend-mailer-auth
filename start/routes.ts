@@ -47,18 +47,18 @@ router.group(() => {
     router.post('/profile/land', [UsersController, 'updateLandProfile'])
 
     router.get('/user/event-registrations', [UsersController, 'eventRegistrations'])
+    router.get('/admin/contact-submissions', [ContactSubmissionsController, 'index'])
 
+    router.get('/admin/dashboard', [AdminController, 'dashboard']).middleware(middleware.adminAuth)
+
+    router.get('/api/stripe/order/:id', [StripeController, 'getOrder'])
+    router.get('/api/stripe/orders', [StripeController, 'getUserOrders'])
+  }).middleware([middleware.cookieToBearer(), middleware.auth()])
+
+router.group(() => {
     router.get('/plans/current', [LandStewardshipPlansController, 'show'])
     router.post('/plans/step1', [LandStewardshipPlansController, 'step1'])
     router.post('/plans/step2', [LandStewardshipPlansController, 'step2'])
     router.post('/plans/step3', [LandStewardshipPlansController, 'step3'])
     router.post('/plans/step4', [LandStewardshipPlansController, 'step4'])
-
-    router.get('/admin/contact-submissions', [ContactSubmissionsController, 'index'])
-
-    router.get('/admin/dashboard', [AdminController, 'dashboard']).middleware(middleware.adminAuth)
-
-    // Stripe protected routes
-    router.get('/api/stripe/order/:id', [StripeController, 'getOrder'])
-    router.get('/api/stripe/orders', [StripeController, 'getUserOrders'])
-  }).middleware([middleware.cookieToBearer(), middleware.auth()])
+}).middleware(middleware.cookieToBearer())
