@@ -131,6 +131,6 @@ export default class OrderConfirmationEmail extends BaseMail {
     </div>
     `
 
-    this.html(contentHtml)
+    this.message.html(contentHtml)
   }
 }

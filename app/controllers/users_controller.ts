@@ -698,7 +698,7 @@ export default class UsersController {
                 let eventDateISO = ''
                 if (order.eventDate) {
                     if (typeof order.eventDate.toISO === 'function') {
-                        eventDateISO = order.eventDate.toISO()
+                        eventDateISO = order.eventDate.toISO() ?? ''
                     } else if (order.eventDate instanceof Date) {
                         eventDateISO = order.eventDate.toISOString()
                     } else if (typeof order.eventDate === 'string') {
