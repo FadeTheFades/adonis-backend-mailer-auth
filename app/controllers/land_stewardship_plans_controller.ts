@@ -7,222 +7,222 @@ import string from '@adonisjs/core/helpers/string'
 
 export default class LandStewardshipPlansController {
 
-  private async _findPlan(auth: any, request: any) {
-    if (auth.user) {
-      return await LandStewardshipPlan.query()
-        .where('userId', auth.user.id)
-        .where('status', 'draft')
-        .orderBy('created_at', 'desc')
-        .first()
+    private async _findPlan(auth: any, request: any) {
+        if (auth.user) {
+            return await LandStewardshipPlan.query()
+            .where('userId', auth.user.id)
+            .where('status', 'draft')
+            .orderBy('created_at', 'desc')
+            .first()
+        }
+
+        const planId = request.header('x-plan-id') || request.input('plan_id')
+        const token = request.header('x-edit-token') || request.input('edit_token')
+
+        if (planId && token) {
+            return await LandStewardshipPlan.query()
+            .where('id', planId)
+            .where('editToken', token)
+            .first()
+        }
+
+        return null
     }
 
-    const planId = request.header('x-plan-id') || request.input('plan_id')
-    const token = request.header('x-edit-token') || request.input('edit_token')
+    public async show({ auth, request, response }: HttpContext) {
+        await auth.check()
 
-    if (planId && token) {
-      return await LandStewardshipPlan.query()
-        .where('id', planId)
-        .where('editToken', token)
-        .first()
+        const plan = await this._findPlan(auth, request)
+
+        if (!plan) return response.noContent()
+
+        return response.ok({
+            ...plan.serialize(),
+            edit_token: plan.editToken
+        })
     }
 
-    return null
-  }
+    public async step1({ auth, request, response }: HttpContext) {
+        await auth.check()
+        const user = auth.user
 
-  public async show({ auth, request, response }: HttpContext) {
-    await auth.check()
-    
-    const plan = await this._findPlan(auth, request)
+        const schema = vine.object({
+            full_name: vine.string().trim(),
+            phone_number: vine.string().trim(),
+            email: vine.string().email(),
+            is_returning_steward: vine.boolean()
+        })
+        const payload = await request.validateUsing(vine.compile(schema))
 
-    if (!plan) return response.noContent()
-    
-    return response.ok({
-        ...plan.serialize(),
-        edit_token: plan.editToken 
-    })
-  }
+        let plan: LandStewardshipPlan | null = null
 
-  public async step1({ auth, request, response }: HttpContext) {
-    await auth.check()
-    const user = auth.user
-
-    const schema = vine.object({
-        full_name: vine.string().trim(),
-        phone_number: vine.string().trim(),
-        email: vine.string().email(),
-        is_returning_steward: vine.boolean()
-    })
-    const payload = await request.validateUsing(vine.compile(schema))
-
-    let plan: LandStewardshipPlan | null = null
-
-    if (user) {
-        if (payload.is_returning_steward === false) {
-            plan = await LandStewardshipPlan.create({
-                userId: user.id,
-                status: 'draft',
-                currentStep: 1,
-                ...payload
-            })
-            
-            plan.merge({
-                fullName: payload.full_name,
-                phoneNumber: payload.phone_number,
-                email: payload.email,
-                isReturningSteward: payload.is_returning_steward
-            })
-            await plan.save()
-
-        } else {
-            plan = await LandStewardshipPlan.updateOrCreate(
-                { userId: user.id, status: 'draft' },
-                { 
+        if (user) {
+            if (payload.is_returning_steward === false) {
+                plan = await LandStewardshipPlan.create({
+                    userId: user.id,
+                    status: 'draft',
                     currentStep: 1,
+                    ...payload
+                })
+
+                plan.merge({
                     fullName: payload.full_name,
                     phoneNumber: payload.phone_number,
                     email: payload.email,
                     isReturningSteward: payload.is_returning_steward
-                }
-            )
-        }
-    } else {
-        const existingPlan = await this._findPlan(auth, request)
-        
-        if (existingPlan) {
-            existingPlan.merge({
-                fullName: payload.full_name,
-                phoneNumber: payload.phone_number,
-                email: payload.email,
-                isReturningSteward: payload.is_returning_steward
-            })
-            await existingPlan.save()
-            plan = existingPlan
+                })
+                await plan.save()
+
+            } else {
+                plan = await LandStewardshipPlan.updateOrCreate(
+                    { userId: user.id, status: 'draft' },
+                    {
+                        currentStep: 1,
+                        fullName: payload.full_name,
+                        phoneNumber: payload.phone_number,
+                        email: payload.email,
+                        isReturningSteward: payload.is_returning_steward
+                    }
+                )
+            }
         } else {
-            plan = await LandStewardshipPlan.create({
-                fullName: payload.full_name,
-                phoneNumber: payload.phone_number,
-                email: payload.email,
-                isReturningSteward: payload.is_returning_steward,
-                status: 'draft',
-                currentStep: 1,
-                editToken: string.random(32)
-            })
+            const existingPlan = await this._findPlan(auth, request)
+
+            if (existingPlan) {
+                existingPlan.merge({
+                    fullName: payload.full_name,
+                    phoneNumber: payload.phone_number,
+                    email: payload.email,
+                    isReturningSteward: payload.is_returning_steward
+                })
+                await existingPlan.save()
+                plan = existingPlan
+            } else {
+                plan = await LandStewardshipPlan.create({
+                    fullName: payload.full_name,
+                    phoneNumber: payload.phone_number,
+                    email: payload.email,
+                    isReturningSteward: payload.is_returning_steward,
+                    status: 'draft',
+                    currentStep: 1,
+                    editToken: string.random(32)
+                })
+            }
         }
-    }
 
-    if (!plan.caseNumber) {
-        plan.caseNumber = `TAS-${new Date().getFullYear()}-${plan.id.toString().padStart(4, '0')}`
-        await plan.save()
-    }
-
-    return response.ok({ 
-        success: true, 
-        plan_id: plan.id, 
-        case_number: plan.caseNumber,
-        edit_token: plan.editToken
-    })
-  }
-
-  public async step2({ auth, request, response }: HttpContext) {
-    await auth.check()
-    
-    const plan = await this._findPlan(auth, request)
-    if (!plan) return response.unauthorized({ message: 'Session expired or plan not found' })
-
-    const schema = vine.object({
-        county: vine.string(),
-        property_address: vine.string(),
-        approximate_acreage: vine.number(),
-        primary_current_land_use: vine.string(),
-        land_management_goals: vine.array(vine.string()),
-        other_goals_text: vine.string().optional()
-    })
-    const payload = await request.validateUsing(vine.compile(schema))
-
-    await plan.merge({
-        county: payload.county,
-        propertyAddress: payload.property_address,
-        approximateAcreage: payload.approximate_acreage,
-        primaryCurrentLandUse: payload.primary_current_land_use,
-        landManagementGoals: payload.land_management_goals,
-        otherGoalsText: payload.other_goals_text || null,
-        currentStep: Math.max(plan.currentStep, 2)
-    }).save()
-
-    return response.ok({ success: true })
-  }
-
-  public async step3({ auth, request, response }: HttpContext) {
-    await auth.check()
-    const plan = await this._findPlan(auth, request)
-    if (!plan) return response.unauthorized({ message: 'Session expired or plan not found' })
-
-    const textSchema = vine.object({
-        gate_access_notes: vine.string().optional(),
-        known_utilities: vine.string().optional(),
-        hazards_awareness: vine.string().optional(),
-        gps_pin_link: vine.string().optional(),
-    })
-    const payload = await request.validateUsing(vine.compile(textSchema))
-
-    const photos = request.files('uploaded_photos', {
-        size: '10mb',
-        extnames: ['jpg', 'png', 'jpeg', 'webp']
-    })
-    
-    let photoPaths: string[] = plan.uploadedPhotos || []
-    for (const photo of photos) {
-        if (photo.isValid) {
-            const fileName = `${cuid()}.${photo.extname}`
-            await photo.move(app.makePath('uploads/plans/photos'), { name: fileName })
-            photoPaths.push(fileName)
+        if (!plan.caseNumber) {
+            plan.caseNumber = `TAS-${new Date().getFullYear()}-${plan.id.toString().padStart(4, '0')}`
+            await plan.save()
         }
+
+        return response.ok({
+            success: true,
+            plan_id: plan.id,
+            case_number: plan.caseNumber,
+            edit_token: plan.editToken
+        })
     }
 
-    const mapScreenshot = request.file('map_screenshot', {
-        size: '10mb',
-        extnames: ['jpg', 'png', 'jpeg', 'pdf']
-    })
-    let mapPath = plan.mapScreenshotPath
-    if (mapScreenshot && mapScreenshot.isValid) {
-        const fileName = `${cuid()}_map.${mapScreenshot.extname}`
-        await mapScreenshot.move(app.makePath('uploads/plans/maps'), { name: fileName })
-        mapPath = fileName
+    public async step2({ auth, request, response }: HttpContext) {
+        await auth.check()
+
+        const plan = await this._findPlan(auth, request)
+        if (!plan) return response.unauthorized({ message: 'Session expired or plan not found' })
+
+        const schema = vine.object({
+            county: vine.string(),
+            property_address: vine.string(),
+            approximate_acreage: vine.number(),
+            primary_current_land_use: vine.string(),
+            land_management_goals: vine.array(vine.string()),
+            other_goals_text: vine.string().optional()
+        })
+        const payload = await request.validateUsing(vine.compile(schema))
+
+        await plan.merge({
+            county: payload.county,
+            propertyAddress: payload.property_address,
+            approximateAcreage: payload.approximate_acreage,
+            primaryCurrentLandUse: payload.primary_current_land_use,
+            landManagementGoals: payload.land_management_goals,
+            otherGoalsText: payload.other_goals_text || null,
+            currentStep: Math.max(plan.currentStep, 2)
+        }).save()
+
+        return response.ok({ success: true })
     }
 
-    await plan.merge({
-        gateAccessNotes: payload.gate_access_notes,
-        knownUtilities: payload.known_utilities,
-        hazardsAwareness: payload.hazards_awareness,
-        gpsPinLink: payload.gps_pin_link,
-        uploadedPhotos: photoPaths,
-        mapScreenshotPath: mapPath,
-        currentStep: Math.max(plan.currentStep, 3)
-    }).save()
+    public async step3({ auth, request, response }: HttpContext) {
+        await auth.check()
+        const plan = await this._findPlan(auth, request)
+        if (!plan) return response.unauthorized({ message: 'Session expired or plan not found' })
 
-    return response.ok({ success: true })
-  }
+        const textSchema = vine.object({
+            gate_access_notes: vine.string().optional(),
+            known_utilities: vine.string().optional(),
+            hazards_awareness: vine.string().optional(),
+            gps_pin_link: vine.string().optional(),
+        })
+        const payload = await request.validateUsing(vine.compile(textSchema))
 
-  public async step4({ auth, request, response }: HttpContext) {
-    await auth.check()
-    const plan = await this._findPlan(auth, request)
-    if (!plan) return response.unauthorized({ message: 'Session expired or plan not found' })
+        const photos = request.files('uploaded_photos', {
+            size: '10mb',
+            extnames: ['jpg', 'png', 'jpeg', 'webp']
+        })
 
-    const schema = vine.object({
-        agrees_to_contact: vine.boolean(),
-        subscribes_to_newsletter: vine.boolean(),
-        agrees_to_sms: vine.boolean()
-    })
-    const payload = await request.validateUsing(vine.compile(schema))
+        let photoPaths: string[] = plan.uploadedPhotos || []
+        for (const photo of photos) {
+            if (photo.isValid) {
+                const fileName = `${cuid()}.${photo.extname}`
+                await photo.move(app.makePath('uploads/plans/photos'), { name: fileName })
+                photoPaths.push(fileName)
+            }
+        }
 
-    await plan.merge({
-        agreesToContact: payload.agrees_to_contact,
-        subscribesToNewsletter: payload.subscribes_to_newsletter,
-        agreesToSms: payload.agrees_to_sms,
-        status: 'submitted',
-        currentStep: 4,
-    }).save()
+        const mapScreenshot = request.file('map_screenshot', {
+            size: '10mb',
+            extnames: ['jpg', 'png', 'jpeg', 'pdf']
+        })
+        let mapPath = plan.mapScreenshotPath
+        if (mapScreenshot && mapScreenshot.isValid) {
+            const fileName = `${cuid()}_map.${mapScreenshot.extname}`
+            await mapScreenshot.move(app.makePath('uploads/plans/maps'), { name: fileName })
+            mapPath = fileName
+        }
 
-    return response.ok({ success: true, case_number: plan.caseNumber })
-  }
+        await plan.merge({
+            gateAccessNotes: payload.gate_access_notes,
+            knownUtilities: payload.known_utilities,
+            hazardsAwareness: payload.hazards_awareness,
+            gpsPinLink: payload.gps_pin_link,
+            uploadedPhotos: photoPaths,
+            mapScreenshotPath: mapPath,
+            currentStep: Math.max(plan.currentStep, 3)
+        }).save()
+
+        return response.ok({ success: true })
+    }
+
+    public async step4({ auth, request, response }: HttpContext) {
+        await auth.check()
+        const plan = await this._findPlan(auth, request)
+        if (!plan) return response.unauthorized({ message: 'Session expired or plan not found' })
+
+        const schema = vine.object({
+            agrees_to_contact: vine.boolean(),
+            subscribes_to_newsletter: vine.boolean(),
+            agrees_to_sms: vine.boolean()
+        })
+        const payload = await request.validateUsing(vine.compile(schema))
+
+        await plan.merge({
+            agreesToContact: payload.agrees_to_contact,
+            subscribesToNewsletter: payload.subscribes_to_newsletter,
+            agreesToSms: payload.agrees_to_sms,
+            status: 'submitted',
+            currentStep: 4,
+        }).save()
+
+        return response.ok({ success: true, case_number: plan.caseNumber })
+    }
 }
