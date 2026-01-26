@@ -30,7 +30,7 @@ export default class LandStewardshipPlansController {
   }
 
   public async show({ auth, request, response }: HttpContext) {
-    await auth.check()
+try { await auth.check() } catch {}
     
     const plan = await this._findPlan(auth, request)
 
@@ -43,7 +43,7 @@ export default class LandStewardshipPlansController {
   }
 
   public async step1({ auth, request, response }: HttpContext) {
-    await auth.check()
+try { await auth.check() } catch {}
     const user = auth.user
 
     const schema = vine.object({
@@ -124,7 +124,7 @@ export default class LandStewardshipPlansController {
   }
 
   public async step2({ auth, request, response }: HttpContext) {
-    await auth.check()
+try { await auth.check() } catch {}
     
     const plan = await this._findPlan(auth, request)
     if (!plan) return response.unauthorized({ message: 'Session expired or plan not found' })
@@ -153,7 +153,7 @@ export default class LandStewardshipPlansController {
   }
 
   public async step3({ auth, request, response }: HttpContext) {
-    await auth.check()
+try { await auth.check() } catch {}
     const plan = await this._findPlan(auth, request)
     if (!plan) return response.unauthorized({ message: 'Session expired or plan not found' })
 
@@ -204,7 +204,7 @@ export default class LandStewardshipPlansController {
   }
 
   public async step4({ auth, request, response }: HttpContext) {
-    await auth.check()
+try { await auth.check() } catch {}
     const plan = await this._findPlan(auth, request)
     if (!plan) return response.unauthorized({ message: 'Session expired or plan not found' })
 

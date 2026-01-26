@@ -7,7 +7,7 @@ import { DateTime } from 'luxon'
 import logger from '@adonisjs/core/services/logger'
 
 const stripe = new Stripe(env.get('STRIPE_SECRET_KEY') || '', {
-  apiVersion: '2025-12-15.clover',
+  apiVersion: '2025-11-17.clover',
 })
 
 export default class StripeController {
