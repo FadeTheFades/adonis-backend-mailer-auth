@@ -1,7 +1,8 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import LandStewardshipPlan from '#models/land_stewardship_plan'
 import vine from '@vinejs/vine'
-import app from '@adonisjs/core/services/app'
+// import app from '@adonisjs/core/services/app'
+import env from '#start/env'
 import { cuid } from '@adonisjs/core/helpers'
 import string from '@adonisjs/core/helpers/string'
 
@@ -152,8 +153,19 @@ export default class LandStewardshipPlansController {
             gps_pin_link: vine.string().optional(),
         })
         const payload = await request.validateUsing(vine.compile(textSchema))
-        const photosPath = app.makePath('uploads/plans/photos')
-        const mapsPath = app.makePath('uploads/plans/maps')
+        // Store uploads under repo-root `public/uploads` so static middleware serves them
+        const repoRoot = process.cwd()
+        const photosPath = `${repoRoot}/public/uploads/plans/photos`
+        const mapsPath = `${repoRoot}/public/uploads/plans/maps`
+
+        // Create directories if they don't exist
+        try {
+            const fs = await import('fs')
+            await fs.promises.mkdir(photosPath, { recursive: true })
+            await fs.promises.mkdir(mapsPath, { recursive: true })
+        } catch (err) {
+            // ignore mkdir errors; move will fail later if necessary
+        }
 
         const photos = request.files('uploaded_photos', {
             size: '10mb',
@@ -161,11 +173,15 @@ export default class LandStewardshipPlansController {
         })
 
         let photoPaths: string[] = plan.uploadedPhotos || []
+        const hostHeader = request.header('host') || `${process.env.HOST || 'localhost'}:${process.env.PORT || '3333'}`
+        const baseUrl = env.get('APP_URL') || `${request.protocol()}://${hostHeader}`
+
         for (const photo of photos) {
             if (photo.isValid) {
                 const fileName = `${cuid()}.${photo.extname}`
                 await photo.move(photosPath, { name: fileName })
-                photoPaths.push(fileName)
+                const fileUrl = `${baseUrl}/uploads/plans/photos/${fileName}`
+                photoPaths.push(fileUrl)
             }
         }
 
@@ -177,7 +193,7 @@ export default class LandStewardshipPlansController {
         if (mapScreenshot && mapScreenshot.isValid) {
             const fileName = `${cuid()}_map.${mapScreenshot.extname}`
             await mapScreenshot.move(mapsPath, { name: fileName })
-            mapPath = fileName
+            mapPath = `${baseUrl}/uploads/plans/maps/${fileName}`
         }
 
         await plan.merge({
